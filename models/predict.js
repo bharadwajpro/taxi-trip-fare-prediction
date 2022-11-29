@@ -302,7 +302,36 @@ const testSamples = [{
 	"base_passenger_fare": 60.91
 }];
 
-export async function predictRandomSample() {
+export async function getPrediction(X, y_actual) {
+    const x = Object.values(X);
+    const x_tensor = new ort.Tensor('float32', Float32Array.from(x), [1, 9]);
+
+    const lgbm_session = await ort.InferenceSession.create('./_next/static/chunks/pages/lgbm.onnx');
+    const dl_session = await ort.InferenceSession.create('./_next/static/chunks/pages/dl.onnx');
+
+    const lgbm_results = await lgbm_session.run({"float_input": x_tensor});
+    const dl_results = await dl_session.run({"input_1": x_tensor});
+
+    let {
+        variable: {
+            data: [lgbm_value = 0.0] = []
+        } = {}
+    } = lgbm_results
+
+    let {
+        output: {
+            data: [dl_value = 0.0] = []
+        } = {}
+    } = dl_results
+
+    return {
+        y_actual,
+        "lgbm": Number(lgbm_value.toFixed(2)),
+        "dl": Number(dl_value.toFixed(2))
+    };
+}
+
+export async function getRandomSample() {
     const sample = testSamples[Math.floor(Math.random() * testSamples.length)];
     sample['trip_miles'] = parseFloat(sample['trip_miles']);
     const y_actual = sample['base_passenger_fare'];
@@ -310,19 +339,7 @@ export async function predictRandomSample() {
     delete X['base_passenger_fare'];
     delete X['index'];
 
-    const x = Object.values(X);
-    const x_tensor = new ort.Tensor('float32', Float32Array.from(x), [1, 9]);
-
-    const lgbm_session = await ort.InferenceSession.create('./_next/static/chunks/pages/lgbm.onnx', {executionProviders: ['wasm']});
-    const dl_session = await ort.InferenceSession.create('./_next/static/chunks/pages/dl.onnx');
-
-    const lgbm_results = await lgbm_session.run({"float_input": x_tensor});
-    const dl_results = await dl_session.run({"input_1": x_tensor});
-
     return {
-        x: X,
-        y_actual,
-        "lgbm": lgbm_results,
-        "dl": dl_results
-    };
+        X, y_actual
+    }
 }

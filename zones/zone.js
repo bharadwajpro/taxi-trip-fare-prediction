@@ -1,3 +1,9 @@
+import { Loader } from '@googlemaps/js-api-loader';
+
+const loader = new Loader({
+    apiKey: "AIzaSyCHBW6W0qLJnqFj7Cbw4kGveApp87hCjlY"
+});
+
 export const zoneData = [
     "Newark Airport, EWR",
     "Jamaica Bay, Queens",
@@ -262,4 +268,59 @@ export const zoneData = [
     "World Trade Center, Manhattan",
     "Yorkville East, Manhattan",
     "Yorkville West, Manhattan"
-]
+];
+
+export const dayNumber = [
+    5, // Wednesday
+    6, // Tuesday
+    1, // Thursday
+    0, // Friday
+    2, // Saturday
+    3, // Sunday
+    4 // Monday
+];
+
+export function setTripMilesSeconds(x, setX) {
+    if (x.PULocation == 0 || x.DOLocation == 0)
+        return;
+    const pickup = zoneData[x.PULocation - 1];
+    const dropoff = zoneData[x.DOLocation - 1];
+    loader.load()
+    .then((google) => {
+        var service = new google.maps.DistanceMatrixService();
+        service.getDistanceMatrix(
+        {
+            origins: [pickup],
+            destinations: [dropoff],
+            travelMode: 'DRIVING',
+            unitSystem: google.maps.UnitSystem.IMPERIAL,
+        }, callback);
+
+        function callback(response, status) {
+            if (status == 'OK') {
+                const {
+                    rows: {
+                        [0]: {
+                            elements: {
+                                [0]: {
+                                    distance: {
+                                        value: trip_meters = 0
+                                    },
+                                    duration: {
+                                        value: trip_time = 0
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } = response;
+                const trip_miles = Number((0.000621371 * trip_meters).toFixed(2));
+                setX({
+                    ...x,
+                    trip_miles,
+                    trip_time
+                })
+            }
+        }
+    });
+}
