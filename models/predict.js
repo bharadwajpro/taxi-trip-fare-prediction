@@ -302,32 +302,58 @@ const testSamples = [{
 	"base_passenger_fare": 60.91
 }];
 
-export async function getPrediction(X, y_actual) {
-    const x = Object.values(X);
-    const x_tensor = new ort.Tensor('float32', Float32Array.from(x), [1, 9]);
+export async function getPrediction(X, y_actual, batch = 1) {
+    let x = null;
+    if (batch == 1)
+        x = Object.values(X);
+    else
+        x = X.flat();
 
+    const x_tensor = new ort.Tensor('float32', Float32Array.from(x), [batch, 9]);
     const lgbm_session = await ort.InferenceSession.create('./_next/static/chunks/pages/lgbm.onnx');
     const dl_session = await ort.InferenceSession.create('./_next/static/chunks/pages/dl.onnx');
 
     const lgbm_results = await lgbm_session.run({"float_input": x_tensor});
     const dl_results = await dl_session.run({"input_1": x_tensor});
 
+    if (batch == 1) {
+        let {
+            variable: {
+                data: [lgbm_value = 0.0] = []
+            } = {}
+        } = lgbm_results
+    
+        let {
+            output: {
+                data: [dl_value = 0.0] = []
+            } = {}
+        } = dl_results
+    
+        return {
+            y_actual,
+            "lgbm": Number(lgbm_value.toFixed(2)),
+            "dl": Number(dl_value.toFixed(2))
+        };
+    }
+    
     let {
         variable: {
-            data: [lgbm_value = 0.0] = []
+            data: lgbm_values = []
         } = {}
     } = lgbm_results
 
     let {
         output: {
-            data: [dl_value = 0.0] = []
+            data: dl_values = []
         } = {}
     } = dl_results
 
+    lgbm_values = lgbm_values.map(v => Number(v.toFixed(2)))
+    dl_values = dl_values.map(v => Number(v.toFixed(2)))
     return {
         y_actual,
-        "lgbm": Number(lgbm_value.toFixed(2)),
-        "dl": Number(dl_value.toFixed(2))
+        "lgbm": lgbm_values,
+        "dl": dl_values
     };
 }
 
