@@ -3,6 +3,7 @@ const CopyPlugin = require('copy-webpack-plugin');
 
 const nextConfig = {
   basePath: '/taxi-trip-fare-prediction',
+  assetPrefix: '/taxi-trip-fare-prediction/',
   reactStrictMode: true,
   webpack: (config, {  }) => {
     config.plugins.push(
