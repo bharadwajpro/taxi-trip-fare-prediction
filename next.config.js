@@ -2,7 +2,22 @@
 const CopyPlugin = require('copy-webpack-plugin');
 
 const nextConfig = {
+  basePath: '/taxi-trip-fare-prediction',
   reactStrictMode: true,
+  async headers() {
+    return [
+      {
+        source: '/_next/static/chunks/pages/\\*onnx',
+        locale: false,
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=9999999999, must-revalidate',
+          }
+        ],
+      },
+    ]
+  },
   webpack: (config, {  }) => {
     config.plugins.push(
       new CopyPlugin({
